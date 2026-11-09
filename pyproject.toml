@@ -1,0 +1,16 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pdf2vfa"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = []
+authors = [{ name = "LIOKA Ranarison Fiderana", email = "luckasranarison@gmail.com" }]
+
+[project.scripts]
+pdf2vfa = "pdf2vfa.__main__:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/pdf2vfa"]
