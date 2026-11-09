@@ -3,7 +3,7 @@ import shutil
 import subprocess
 
 from argparse import ArgumentParser
-
+from .lib.svg import SVGVisitor
 from .lib.fs import write_file
 from .lib.types import time_signature
 from .lib.html import HTMLVisitor, build_raw_text
@@ -14,7 +14,7 @@ DEPENDENCIES = ["pdftotext", "pdftocairo"]
 def build_cli():
     cli = ArgumentParser(
         prog="pdf2vfa",
-        description="PDF to vfa conversion helper for agentic transcription",
+        description="PDF to vfa progressive conversion tool",
     )
 
     cli.add_argument("-i", "--input", required=True)
@@ -39,20 +39,28 @@ def main() -> int:
     if not os.path.exists(args.out_dir):
         os.mkdir(args.out_dir)
 
-    cmd_out = subprocess.run(
+    # stage 1: Row extraction
+    html_out = subprocess.run(
         ["pdftotext", args.input, "-bbox", "-"], stdout=subprocess.PIPE
     )
 
-    html = cmd_out.stdout.decode()
-
-    # stage 1: Row extraction
-    visitor = HTMLVisitor(args)
-    pages = visitor.resolve_pages(html)
+    html = html_out.stdout.decode()
+    html_visitor = HTMLVisitor(args)
+    pages = html_visitor.resolve_pages(html)
     raw_text, rows = build_raw_text(args, pages)
 
     write_file("raw.txt", raw_text, args)
 
-    # stage 2: Barline
+    # stage 2: Symbol extraction
+    svg_out = subprocess.run(
+        ["pdftocairo", args.input, "-svg", "-"], stdout=subprocess.PIPE
+    )
+
+    svg = svg_out.stdout.decode()
+    svg_visitor = SVGVisitor()
+    symbols = svg_visitor.resolve_symbols(svg)
+
+    print(symbols)
 
     return 0
 
