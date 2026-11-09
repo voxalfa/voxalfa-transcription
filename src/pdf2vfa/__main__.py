@@ -3,7 +3,7 @@ import shutil
 import subprocess
 
 from argparse import ArgumentParser
-from .lib.svg import SVGVisitor
+from .lib.svg import SVGVisitor, format_symbols
 from .lib.fs import write_file
 from .lib.types import time_signature
 from .lib.html import HTMLVisitor, build_raw_text
@@ -21,9 +21,10 @@ def build_cli():
     cli.add_argument("-o", "--out-dir", default="./extracted")
     cli.add_argument("-t", "--time-signature", type=time_signature)
     cli.add_argument("-v", "--voices", type=int)
-    cli.add_argument("-l", "--line-tolerance", type=float, default=3.0)
+    cli.add_argument("-l", "--line-tolerance", type=float, default=4.0)
     cli.add_argument("-lg", "--line-gap", type=float, default=15.0)
     cli.add_argument("-wg", "--word-gap", type=float, default=5.0)
+    cli.add_argument("-s", "--stroke-width", type=float, default=3.0)
 
     return cli
 
@@ -57,10 +58,18 @@ def main() -> int:
     )
 
     svg = svg_out.stdout.decode()
-    svg_visitor = SVGVisitor()
+    svg_visitor = SVGVisitor(args)
     symbols = svg_visitor.resolve_symbols(svg)
+    symbols_dump = format_symbols(symbols)
 
-    print(symbols)
+    write_file("symbols.txt", symbols_dump, args)
+
+    # stage 3: Symbol merging
+    # stage 4: Note tokenization
+    # stage 5: Section arrangment
+    # stage 6: Marker mapping (optional)
+    # stage 7: Lyrics mapping (optional)
+    # stage 8: Validation
 
     return 0
 

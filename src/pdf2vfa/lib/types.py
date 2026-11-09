@@ -18,11 +18,17 @@ class Box:
 
     def merge(self, other: Box):
         return Box(
-            max(self.x1, other.x1),
-            max(self.y1, other.y1),
+            min(self.x1, other.x1),
+            min(self.y1, other.y1),
             max(self.x2, other.x2),
             max(self.y2, other.y2),
         )
+
+    def width(self):
+        return self.x2 - self.x1
+
+    def height(self):
+        return self.y2 - self.y1
 
 
 @dataclass()
@@ -51,18 +57,18 @@ class TextPage:
 
 class SVGPathKind(Enum):
     UNKNOWN = 0
-    BARLINE = 1
-    BARLINE2 = 2
-    CURLY = 3
-    FERMATA = 4
-    STACCATO = 5
+    CURLY = 1
+    BARLINE = 2
+    UNDERLINE = 3
+    HAIRPIN = 4
+    FERMATA = 5
     MARCATO = 6
-    CRESCENDO = 7
-    DECRESCENDOJ = 8
+    STACCATO = 7
 
 
 @dataclass()
 class SVGPath:
+    page: int
     kind: SVGPathKind
     box: Box
     points: List[Point]
@@ -88,18 +94,6 @@ class Params:
     voices: Optional[int]
     time_signature: Optional[TimeSignature]
     line_tolerance: float
+    line_gap: float
     word_gap: float
-
-
-@dataclass()
-class Barline:
-    x: float
-    y1: float
-    y2: float
-
-
-@dataclass()
-class Curly:
-    x: float
-    y1: float
-    y2: float
+    stroke_width: float

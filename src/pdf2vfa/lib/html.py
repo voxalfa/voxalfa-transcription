@@ -2,6 +2,8 @@ import math
 
 from html.parser import HTMLParser
 from typing import List, Tuple
+
+from .utils import format_float
 from .types import Params, Page, Row, TextPage, Word, Box
 
 
@@ -87,9 +89,6 @@ def build_raw_text(args, pages: List[Page]) -> Tuple[str, List[TextPage]]:
         last_y = -1
 
         for row in page.rows:
-            fixed_baseline = "%.2f" % row.baseline
-            padded_baseline = fixed_baseline.rjust(7).replace(" ", "0")
-
             first = row.words[0]
             indent = max(0, math.floor((first.box.x1 - left) / args.word_gap))
 
@@ -97,8 +96,14 @@ def build_raw_text(args, pages: List[Page]) -> Tuple[str, List[TextPage]]:
             last_x = first.box.x2
 
             for word in row.words[1:]:
-                space_count = max(math.floor((word.box.x1 - last_x) / args.word_gap), 1)
-                row_text += " " * space_count + word.text
+                if word.box.x1 < last_x:
+                    row_text += word.text  # italic subscript edge case
+                else:
+                    space_count = max(
+                        math.floor((word.box.x1 - last_x) / args.word_gap), 1
+                    )
+                    row_text += " " * space_count + word.text
+
                 last_x = word.box.x2
 
             line_count = 1
@@ -107,7 +112,9 @@ def build_raw_text(args, pages: List[Page]) -> Tuple[str, List[TextPage]]:
                 line_count = max(math.floor((row.baseline - last_y) / args.line_gap), 1)
 
             last_y = row.baseline
-            dump_text += f"[{padded_baseline}] " + row_text + "\n" * line_count
+            dump_text += (
+                f"[y={format_float(row.baseline)}] " + row_text + "\n" * line_count
+            )
 
             text_page.rows.append(row_text)
 
