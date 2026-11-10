@@ -55,6 +55,23 @@ class TextPage:
     rows: List[str]
 
 
+@dataclass()
+class LabeledPage:
+    id: int
+    rows: List[RowLabel]
+
+
+class RowLabel(Enum):
+    TITLE = 0
+    AUTHOR = 1
+    META = 2
+    MARKER = 3
+    SOLFA = 4
+    LYRICS = 5
+    VERSE = 6
+    UNKNOWN = 7
+
+
 class SVGPathKind(Enum):
     UNKNOWN = 0
     CURLY = 1
@@ -97,3 +114,14 @@ class Params:
     line_gap: float
     word_gap: float
     stroke_width: float
+
+
+@dataclass()
+class Header:
+    title: str
+    author: Optional[str]
+    composer: Optional[str]
+    key: str
+    time_signature: Optional[TimeSignature]
+    meter: Optional[str]
+    tempo: Optional[str]

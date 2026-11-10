@@ -78,14 +78,15 @@ def build_raw_text(args, pages: List[Page]) -> Tuple[str, List[TextPage]]:
     dump_text = ""
     text_pages = []
 
-    for id, page in enumerate(pages):
+    for page in pages:
         left = min(
             (word.box.x1 for row in page.rows for word in row.words),
             default=0.0,
         )
 
-        text_page = TextPage(id, rows=[])
-        dump_text += f"{"\n" if id > 0 else ""}>>>>>>>>> Page {id}\n\n"
+        text_page = TextPage(page.id, rows=[])
+        page_index = page.id + 1
+        dump_text += f"{"\n" if page_index > 1 else ""}>>>>>>>>> Page {page}\n\n"
         last_y = -1
 
         for row in page.rows:

@@ -3,6 +3,8 @@ import shutil
 import subprocess
 
 from argparse import ArgumentParser
+
+from .lib.classifier import Classifier, format_labels
 from .lib.svg import SVGVisitor, format_symbols
 from .lib.fs import write_file
 from .lib.types import time_signature
@@ -48,7 +50,7 @@ def main() -> int:
     html = html_out.stdout.decode()
     html_visitor = HTMLVisitor(args)
     pages = html_visitor.resolve_pages(html)
-    raw_text, rows = build_raw_text(args, pages)
+    raw_text, text_pages = build_raw_text(args, pages)
 
     write_file("raw.txt", raw_text, args)
 
@@ -64,12 +66,19 @@ def main() -> int:
 
     write_file("symbols.txt", symbols_dump, args)
 
-    # stage 3: Symbol merging
-    # stage 4: Note tokenization
-    # stage 5: Section arrangment
-    # stage 6: Marker mapping (optional)
-    # stage 7: Lyrics mapping (optional)
-    # stage 8: Validation
+    # stage 3: Row classification
+    classifier = Classifier(args)
+    labeled_pages = classifier.resolve_labels(text_pages)
+    labels_dump = format_labels(text_pages, labeled_pages)
+
+    write_file("labels.txt", labels_dump, args)
+
+    # stage 4: Symbol merging
+    # stage 5: Note tokenization
+    # stage 6: Section arrangment
+    # stage 7: Marker mapping (optional)
+    # stage 8: Lyrics mapping (optional)
+    # stage 9: Validation
 
     return 0
 
