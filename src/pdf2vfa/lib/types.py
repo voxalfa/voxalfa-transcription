@@ -1,6 +1,9 @@
+import logging
+
 from dataclasses import dataclass
 from enum import Enum
-from typing import List, Optional
+from math import log
+from typing import List, Literal, Optional
 
 
 @dataclass()
@@ -69,7 +72,8 @@ class RowLabel(Enum):
     SOLFA = 4
     LYRICS = 5
     VERSE = 6
-    UNKNOWN = 7
+    NOTE = 7
+    UNKNOWN = 8
 
 
 class SVGPathKind(Enum):
@@ -114,6 +118,7 @@ class Params:
     line_gap: float
     word_gap: float
     stroke_width: float
+    log_level: int
 
 
 @dataclass()
@@ -125,3 +130,12 @@ class Header:
     time_signature: Optional[TimeSignature]
     meter: Optional[str]
     tempo: Optional[str]
+
+
+def log_level(s: str):
+    level = logging._nameToLevel.get(s.upper())
+
+    if level:
+        return level
+    else:
+        raise ValueError

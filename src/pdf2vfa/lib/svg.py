@@ -175,7 +175,7 @@ def format_symbols(symbols: List[SVGPath]):
 
         buffer += (
             f"[id={id}]"
-            + f" page={symbol.page} kind={symbol.kind} x1={x1} y1={y1} x2={x2} y2={y2}"
+            + f" page={symbol.page + 1} kind={symbol.kind} x1={x1} y1={y1} x2={x2} y2={y2}"
             + f" / width={width} height={height}"
             + f" ({len(symbol.points)} points, curved={symbol.curved})\n"
         )

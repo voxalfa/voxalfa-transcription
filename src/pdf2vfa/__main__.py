@@ -1,14 +1,14 @@
 import os
+import glob
+import logging
 import shutil
-import subprocess
 
 from argparse import ArgumentParser
+from concurrent.futures import ProcessPoolExecutor
 
-from .lib.classifier import Classifier, format_labels
-from .lib.svg import SVGVisitor, format_symbols
-from .lib.fs import write_file
-from .lib.types import time_signature
-from .lib.html import HTMLVisitor, build_raw_text
+from .lib.types import log_level, time_signature
+from .lib.pipeline import process_file
+from .lib.utils import logger
 
 DEPENDENCIES = ["pdftotext", "pdftocairo"]
 
@@ -23,10 +23,12 @@ def build_cli():
     cli.add_argument("-o", "--out-dir", default="./extracted")
     cli.add_argument("-t", "--time-signature", type=time_signature)
     cli.add_argument("-v", "--voices", type=int)
-    cli.add_argument("-l", "--line-tolerance", type=float, default=4.0)
+    cli.add_argument("-l", "--line-tolerance", type=float, default=6.0)
     cli.add_argument("-lg", "--line-gap", type=float, default=15.0)
     cli.add_argument("-wg", "--word-gap", type=float, default=5.0)
     cli.add_argument("-s", "--stroke-width", type=float, default=3.0)
+    cli.add_argument("-L", "--log-level", type=log_level, default=logging.INFO)
+    cli.add_argument("-j", "--jobs", type=int, default=os.cpu_count())
 
     return cli
 
@@ -36,49 +38,23 @@ def main() -> int:
 
     for dep in DEPENDENCIES:
         if shutil.which(dep) is None:
-            print(f"'{dep}' command is not executable")
+            logger.error(f"'{dep}' command is required but is not executable")
             return 1
 
     if not os.path.exists(args.out_dir):
         os.mkdir(args.out_dir)
 
-    # stage 1: Row extraction
-    html_out = subprocess.run(
-        ["pdftotext", args.input, "-bbox", "-"], stdout=subprocess.PIPE
-    )
+    if not os.path.exists(args.input):
+        logger.error(f"{args.input} is not accessible")
+        return 1
 
-    html = html_out.stdout.decode()
-    html_visitor = HTMLVisitor(args)
-    pages = html_visitor.resolve_pages(html)
-    raw_text, text_pages = build_raw_text(args, pages)
+    if os.path.isfile(args.input):
+        files = [args.input]
+    else:
+        files = glob.glob(os.path.join(args.input, "*.pdf"))
 
-    write_file("raw.txt", raw_text, args)
-
-    # stage 2: Symbol extraction
-    svg_out = subprocess.run(
-        ["pdftocairo", args.input, "-svg", "-"], stdout=subprocess.PIPE
-    )
-
-    svg = svg_out.stdout.decode()
-    svg_visitor = SVGVisitor(args)
-    symbols = svg_visitor.resolve_symbols(svg)
-    symbols_dump = format_symbols(symbols)
-
-    write_file("symbols.txt", symbols_dump, args)
-
-    # stage 3: Row classification
-    classifier = Classifier(args)
-    labeled_pages = classifier.resolve_labels(text_pages)
-    labels_dump = format_labels(text_pages, labeled_pages)
-
-    write_file("labels.txt", labels_dump, args)
-
-    # stage 4: Symbol merging
-    # stage 5: Note tokenization
-    # stage 6: Section arrangment
-    # stage 7: Marker mapping (optional)
-    # stage 8: Lyrics mapping (optional)
-    # stage 9: Validation
+    with ProcessPoolExecutor(max_workers=args.jobs) as pool:
+        pool.map(process_file, files, [args for _ in files])
 
     return 0
 
