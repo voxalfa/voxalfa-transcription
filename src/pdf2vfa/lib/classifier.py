@@ -1,7 +1,7 @@
 import logging
 import re
 
-from typing import List
+from typing import List, Optional
 from .utils import logger
 from .types import LabeledPage, Params, RowLabel, TextPage
 
@@ -14,6 +14,8 @@ TIME_RE = re.compile(r"(?<![\d/])\d{1,2}\s*/\s*\d{1,2}(?![\d/])")
 TEMPO_RE = re.compile(r"(?<!\w)(?:rit|rall|accel)(?!\w)", re.IGNORECASE)
 KEY_RE = re.compile(r"D[oô]\s+dia", re.IGNORECASE)
 NOTE_RE = re.compile(r"[smltdrf][aie]?[',]?")
+DATE_REGEX = re.compile(r"\d\d\d\d - \d\d\d\d")
+ID_REGEX = re.compile(r"\(\d\)")
 
 
 class Classifier:
@@ -36,7 +38,14 @@ class Classifier:
             current = LabeledPage(page.id, [])
 
             for row_id, text in enumerate(page.rows):
-                label = self.evaluate_row(row_id, text, current.rows)
+                prev = None
+
+                if current.rows:
+                    prev = current.rows[-1]
+                elif labels and labels[-1].rows:
+                    prev = labels[-1].rows[-1]
+
+                label = self.evaluate_row(row_id, text, prev)
                 current.rows.append(label)
 
                 if self.params.log_level >= logging.WARN and label == RowLabel.UNKNOWN:
@@ -54,31 +63,41 @@ class Classifier:
 
         return labels
 
-    def evaluate_row(self, id: int, text: str, context: List[RowLabel]):
+    def evaluate_row(self, id: int, text: str, prev: Optional[RowLabel]):
         if len(text) == 0:
             return RowLabel.UNKNOWN
 
-        if id == 0:
+        if prev is None and id == 0:
             return RowLabel.TITLE  # safe to assume?
+        if self.is_identifier_row(text):
+            return RowLabel.IDENTIFIER
         if self.is_meta_row(text):
             return RowLabel.META
+        if self.is_author_row(text, prev):
+            return RowLabel.AUTHOR
         if self.is_solfa_row(text):
             return RowLabel.SOLFA
-        if self.is_author_row(text, context[-1]):
-            return RowLabel.AUTHOR
-        if self.is_lyrics_row(text, context[-1]):
+        if self.is_lyrics_row(text, prev):
             return RowLabel.LYRICS
         if self.is_marker_row(text):
             return RowLabel.MARKER
-        if self.is_verse_row(text, context[-1]):
+        if self.is_verse_row(text, prev):
             return RowLabel.VERSE
-        if self.is_note_row(text, context[-1]):
+        if self.is_note_row(text, prev):
             return RowLabel.NOTE
 
         return RowLabel.UNKNOWN
 
-    def is_author_row(self, text: str, prev: RowLabel):
-        return prev == RowLabel.TITLE or prev == RowLabel.AUTHOR
+    def is_identifier_row(self, text: str):
+        return bool(ID_REGEX.search(text))
+
+    def is_author_row(self, text: str, prev: Optional[RowLabel]):
+        return (
+            prev == RowLabel.TITLE
+            or prev == RowLabel.AUTHOR
+            or prev == RowLabel.IDENTIFIER
+            or bool(DATE_REGEX.search(text))
+        )
 
     def is_meta_row(self, text: str):
         return KEY_RE.search(text) is not None
@@ -95,13 +114,13 @@ class Classifier:
     def is_solfa_row(self, text: str):
         return "|" in text or ":" in text
 
-    def is_lyrics_row(self, text: str, prev: RowLabel):
+    def is_lyrics_row(self, text: str, prev: Optional[RowLabel]):
         return prev == RowLabel.SOLFA
 
-    def is_verse_row(self, text: str, prev: RowLabel):
+    def is_verse_row(self, text: str, prev: Optional[RowLabel]):
         return prev == RowLabel.LYRICS or prev == RowLabel.VERSE
 
-    def is_note_row(self, text: str, prev: RowLabel):
+    def is_note_row(self, text: str, prev: Optional[RowLabel]):
         tokens = text.split()
         return (
             prev == RowLabel.META

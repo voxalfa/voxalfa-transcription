@@ -2,8 +2,7 @@ import logging
 
 from dataclasses import dataclass
 from enum import Enum
-from math import log
-from typing import List, Literal, Optional
+from typing import List, Optional
 
 
 @dataclass()
@@ -66,14 +65,15 @@ class LabeledPage:
 
 class RowLabel(Enum):
     TITLE = 0
-    AUTHOR = 1
-    META = 2
-    MARKER = 3
-    SOLFA = 4
-    LYRICS = 5
-    VERSE = 6
-    NOTE = 7
-    UNKNOWN = 8
+    IDENTIFIER = 1
+    AUTHOR = 2
+    META = 3
+    MARKER = 4
+    SOLFA = 5
+    LYRICS = 6
+    VERSE = 7
+    NOTE = 8
+    UNKNOWN = 9
 
 
 class SVGPathKind(Enum):
